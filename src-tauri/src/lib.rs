@@ -36,9 +36,22 @@ enum GamingPlatform {
 impl Gta5 {
     pub fn build() -> Result<Gta5, String> {
         let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-        let gta5_reg = hklm
-            .open_subkey("SOFTWARE\\WOW6432Node\\Rockstar Games\\GTAV Enhanced")
-            .map_err(|_| "未找到 GTA5 注册表项".to_string())?;
+        let rockstar_reg = hklm
+            .open_subkey("SOFTWARE\\WOW6432Node\\Rockstar Games")
+            .map_err(|e| format!("未找到 Rockstar 注册项: {:?}", e))?;
+        let mut gta5_reg = None;
+        for ele in rockstar_reg.enum_keys() {
+            let ele = ele.map_err(|e| format!("获取 Rockstar 注册表项时出错: {:?}", e))?;
+            if ele.contains("GTA") && ele.contains("V") && ele.contains("Enhanced") {
+                gta5_reg = Some(
+                    rockstar_reg
+                        .open_subkey(ele)
+                        .map_err(|e| format!("未找到 GTA5 注册项: {:?}", e))?,
+                );
+                break;
+            }
+        }
+        let gta5_reg = gta5_reg.ok_or("未找到 GTA5 注册表项".to_string())?;
         for result in gta5_reg.enum_values() {
             let (name, value) = result.map_err(|e| format!("获取 GTA5 注册表项时出错: {:?}", e))?;
             if name.contains("InstallFolder") {
@@ -208,8 +221,12 @@ impl<'a> Gta5Injector<'a> {
         Ok(())
     }
 
-    fn update_gta5_info(&mut self) {
-        self.gta5 = Gta5::build().inspect_err(|e| println!("{}", e)).ok();
+    fn update_gta5_info(&mut self) -> Result<(), String> {
+        self.gta5 = match Gta5::build() {
+            Ok(gta5) => Some(gta5),
+            Err(e) => return Err(e),
+        };
+        Ok(())
     }
 }
 
@@ -223,7 +240,7 @@ fn inject_gta5(state: State<'_, Mutex<Gta5Injector>>) -> Result<(), String> {
 #[tauri::command]
 fn get_gta5_info(state: State<'_, Mutex<Gta5Injector>>) -> Result<Gta5, String> {
     let mut injector = state.lock().map_err(|e| format!("锁定 Gta5Injector 时出错: {:?}", e))?;
-    injector.update_gta5_info();
+    injector.update_gta5_info()?;
     injector.gta5.clone().ok_or("获取 GTA5 信息时出错".to_string())
 }
 
