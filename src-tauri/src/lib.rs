@@ -69,7 +69,7 @@ impl Gta5 {
                     return Err("未找到 GTA5".to_string());
                 };
 
-                let fsl_path = PathBuf::from(&format!("{}\\version.dll", game_path));
+                let fsl_path = PathBuf::from(&format!("{}\\WINMM.dll", game_path));
                 let fsl_path = if fsl_path.exists() {
                     Some(fsl_path)
                 } else {
@@ -98,7 +98,7 @@ impl<'a> Gta5Injector<'a> {
     fn new() -> Self {
         Self {
             yim_dll_path: Mutex::new("assets\\YimMenuV2.dll".to_string()),
-            fsl_dll_path: Mutex::new("assets\\version.dll".to_string()),
+            fsl_dll_path: Mutex::new("assets\\WINMM.dll".to_string()),
             process_name: "GTA5_Enhanced.exe",
             gta5: Gta5::build().inspect_err(|e| println!("{}", e)).ok(),
         }
@@ -168,7 +168,7 @@ impl<'a> Gta5Injector<'a> {
             .ok_or("GTA5 信息未初始化".to_string())?
             .game_path;
 
-        let fsl_dst_path = Path::new(gta5_path).join("version.dll");
+        let fsl_dst_path = Path::new(gta5_path).join("WINMM.dll");
 
         let mut temp_file = NamedTempFile::new_in(&gta5_path).map_err(|e| format!("创建临时文件时出错: {}", e) )?;
 
@@ -280,6 +280,6 @@ mod tests {
         let gta5 = Gta5::build().unwrap();
         assert!(matches!(gta5.platform, GamingPlatform::Epic));
         assert_eq!(gta5.game_path, "D:\\Program Files\\Epic Games\\GTAVEnhanced");
-        assert_eq!(gta5.fsl_path.unwrap().to_str().unwrap(), "D:\\Program Files\\Epic Games\\GTAVEnhanced\\version.dll");
+        assert_eq!(gta5.fsl_path.unwrap().to_str().unwrap(), "D:\\Program Files\\Epic Games\\GTAVEnhanced\\WINMM.dll");
     }
 }
